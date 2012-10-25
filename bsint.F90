@@ -28,36 +28,6 @@ CONTAINS
 		accel(3) = gravA*dist1(3) + gravB*dist2(3)
 	END SUBROUTINE Gravity
 
-	! testing integrator
-	SUBROUTINE Euler(posA, velA, massA, posB, velB, massB, dt)
-		IMPLICIT NONE
-		INTEGER :: ii
-		DOUBLE PRECISION, DIMENSION(3) :: posA, velA, posB, velB
-		DOUBLE PRECISION, DIMENSION(3) :: accel, dist
-		DOUBLE PRECISION :: grav, massA, massB, dt
-
-		dist(1) = posB(1) - posA(1)
-		dist(2) = posB(2) - posA(2)
-		dist(3) = posB(3) - posA(3)
-
-		! solve for gravity
-		grav = -G*massA/(VecMag(dist))**3D0
-		accel(1) = grav*dist(1)
-		accel(2) = grav*dist(2)
-		accel(3) = grav*dist(3)
-
-		! integrate velocity
-		velB(1) = velB(1) + accel(1)*dt
-		velB(2) = velB(2) + accel(2)*dt
-		velB(3) = velB(3) + accel(3)*dt
-
-		! integrate position
-		posB(1) = posB(1) + velB(1)*dt
-		posB(2) = posB(2) + velB(2)*dt
-		posB(3) = posB(3) + velB(3)*dt
-
-	END SUBROUTINE Euler
-
 	SUBROUTINE Euler2(posA, velA, massA, posB, velB, massB, posC, velC, massC, dt)
 		IMPLICIT NONE
 		INTEGER :: ii
@@ -80,63 +50,54 @@ CONTAINS
 	END SUBROUTINE Euler2
 
 
-	SUBROUTINE BS(steps)
+	SUBROUTINE BS(posA, velA, massA, posB, velB, massB, posC, velC, massC, dt, steps, ret)
 		INTEGER :: n, i, iter, steps
 		PARAMETER (iter = 3)
-		DOUBLE PRECISION :: yn, xn, ynn, xnn, x_old, y_old, h
-		DOUBLE PRECISION :: factor, ret
-		DOUBLE PRECISION, DIMENSION(iter) :: res, yold, ans
+		DOUBLE PRECISION, DIMENSION(3) :: posA, velA, posB, velB, posC, velC
+		DOUBLE PRECISION :: massA, massB, massC, dt
+		DOUBLE PRECISION, DIMENSION(3) :: pos_n, pos_nn, pos_old, accel, factor, ret
+		DOUBLE PRECISION :: h
+		DOUBLE PRECISION, DIMENSION(3,iter) :: res, pos_all, ans
 		! START  integration at different stepsizes
 		DO n=1,iter
-			yn = 0D0
-			xn = 0D0
-			ynn = 0D0
-			xnn = 0D0
-			y_old = 0D0
-			x_old = 0D0
+			pos_n(:) = 0D0 ! CHANGE
+			pos_nn(:) = 0D0
+			pos_old(:) = 0D0
 			h = 0.5D0/(n*steps*1D0)
-			yn = y_old
-			xn = x_old
-			ynn = y_old + h!*f(x_old,y_old)
-			xnn = x_old + h
+			! TODO: co-evolve positions for stability
+			CALL Gravity(posA, massA, posB, massB, pos_old, massC, accel)
+			pos_nn(:) = pos_old(:) + h*accel(:)
+			
 			DO i=1,2*n*steps-1,2
-				yn = yn + 2.0*h!*f(xnn,ynn)
-				xn = xn + 2.0*h
-				ynn = ynn + 2.0*h!*f(xn,yn)
-				xnn = xnn + 2.0*h
+				CALL Gravity(posA, massA, posB, massB, pos_nn, massC, accel)
+				pos_n(:) = pos_n(:) + 2D0*h*accel(:)
+				CALL Gravity(posA, massA, posB, massB, pos_n, massC, accel)
+				pos_nn(:) = pos_nn(:) + 2D0*h*accel(:)
 			ENDDO
-			ynn = ynn - h!*f(xn,yn)
-			res(n) = (yn+ynn)*0.5
+			CALL Gravity(posA, massA, posB, massB, pos_n, massC, accel)
+			pos_nn(:) = pos_nn(:) - h*accel(:)
+			res(:,n) = (pos_n(:)+pos_nn(:))*0.5D0
 		ENDDO
 		
 
 		! START  rational extrapolation
-!	for (i=0; i<iter; i++) 
-!	{
-!		yold[i] = 0.0;
-!		ans[i] = 0.0;
-!	}
-!
-!	for (n=1; n<iter; n++)
-!	{
-!		for (i=0; i<iter-n; i++)
-!		{
-!			factor = 1.0 - (res[i+1]-res[i])/(res[i+1]-yold[i+1]);
-!			factor = factor*pow((i+n+1.)/(i+1.), 2.0) - 1.0;
-!			ans[i] = res[i+1] + (res[i+1]-res[i])/factor;
-!		}
-!		for (i=0; i<iter; i++)
-!		{
-!			yold[i] = res[i];
-!			res[i] = ans[i];
-!		}
-!	}
-!	ret = ans[0];
-!	free(res);
-!	free(yold);
-!	free(ans);
-!	return ret;
+		DO i=1,iter
+			pos_all(:,i) = 0D0
+			ans(:,i) = 0D0
+		ENDDO
 
+		DO n=1,iter
+			DO i=1,iter-n
+				factor(:) = 1D0 - (res(:,i+1)-res(:,i))/(res(:,i+1)-pos_all(:,i+1))
+				factor(:) = factor(:)*((i+n+1D0)/(i+1D0))**2D0 - 1D0
+				ans(:,i) = res(:,i+1) + (res(:,i+1)-res(:,i))/factor(:)
+			ENDDO
+			DO i=1,iter
+				pos_all(:,i) = res(:,i)
+				res(:,i) = ans(:,i)
+			ENDDO
+		ENDDO
+		ret(:) = ans(:,1)
 	END SUBROUTINE BS
 
 END MODULE BSINT
