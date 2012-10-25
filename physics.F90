@@ -8,35 +8,54 @@ MODULE PHYSICS
 
 CONTAINS
 
-	! measure current eccentricity
+	! measure current inclination relative to.. uh.. z-axis?
+	SUBROUTINE Inclination(posB, velB, i)
+		IMPLICIT NONE
+		DOUBLE PRECISION, DIMENSION(3) :: posB, velB, angmom
+		DOUBLE PRECISION :: i
+
+		angmom(1) = posB(2)*velB(3) - posB(3)*velB(2)
+		angmom(2) = posB(3)*velB(1) - posB(1)*velB(3)
+		angmom(3) = posB(1)*velB(2) - posB(2)*velB(1)
+		! A dot B = ABcos(theta)
+		i = ACOS(angmom(3)/VecMag(angmom))
+	END SUBROUTINE Inclination
+
+	! new because im dumb
 	SUBROUTINE Eccentricity(posA, velA, massA, posB, velB, massB, ecc)
 		IMPLICIT NONE
-		DOUBLE PRECISION, DIMENSION(3) :: posA, velA, posB, velB, angmom, dist, relvel
-		DOUBLE PRECISION :: ecc, spm, en, h, mu, massA, massB
+		DOUBLE PRECISION, DIMENSION(3) :: posA, velA, posB, velB, angmom, dist, relvel, eccvec
+		DOUBLE PRECISION :: ecc, spm, en, h, mu, massA, massB, r
 
 		dist(1) = posB(1) - posA(1)
 		dist(2) = posB(2) - posA(2)
 		dist(3) = posB(3) - posA(3)
-
 		relvel(1) = velB(1) - velA(1)
 		relvel(2) = velB(2) - velA(2)
 		relvel(3) = velB(3) - velA(3)
+		r = VecMag(dist)
 
 		! reduced mass
 		spm = massA*massB/(massA+massB)
-		! specific orbital energy
-		en = (0.5D0 * massB * (VecMag(relvel))**2D0 - G * massB * massA / VecMag(dist))/spm
 		! gravitational parameter
 		mu = G*(massA+massB)
 		! specific angular momentum
 		angmom(1) = dist(2)*relvel(3) - dist(3)*relvel(2)
 		angmom(2) = dist(3)*relvel(1) - dist(1)*relvel(3)
 		angmom(3) = dist(1)*relvel(2) - dist(2)*relvel(1)
-		h = VecMag(angmom)
-		h = angmom(3)
+		angmom(:) = angmom(:)
 
-		ecc = SQRT(1D0 + 2D0*en*h*h/(mu*mu))
-		
+		eccvec(1) = relvel(2)*angmom(3) - relvel(3)*angmom(2)
+		eccvec(2) = relvel(3)*angmom(1) - relvel(1)*angmom(3)
+		eccvec(3) = relvel(1)*angmom(2) - relvel(2)*angmom(1)
+
+		eccvec(:) = eccvec(:) / mu
+
+		eccvec(1) = eccvec(1) - dist(1)/r
+		eccvec(2) = eccvec(2) - dist(2)/r
+		eccvec(3) = eccvec(3) - dist(3)/r
+
+		ecc = VecMag(eccvec)
 	END SUBROUTINE Eccentricity
 
 	! analytic solution for driver position
@@ -47,9 +66,9 @@ CONTAINS
 
 		x = 2D0*PI*time/period
 
-		pos(1) = 5.2D0*COS(x)*COS(0.1)
+		pos(1) = 5.2D0*COS(x)*COS(2D0)
 		pos(2) = -5.2D0*SIN(x)
-		pos(3) = 5.2D0*COS(x)*SIN(0.1)
+		pos(3) = 5.2D0*COS(x)*SIN(2D0)
 
 	END SUBROUTINE DriverPos
 

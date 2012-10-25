@@ -6,17 +6,18 @@ PROGRAM ORBIT
 
 	! misc variables
 	INTEGER :: ii, ij, ik, id
-	DOUBLE PRECISION :: ecc
+	DOUBLE PRECISION :: ecc, inc
 
 	! number of systems to evolve simultaneously
 	INTEGER :: nsystems
-	PARAMETER(nsystems=10)
+	PARAMETER(nsystems=1)
 	
 	! body parameters
 	! mass in solar mass
 	! position in AU
 	! velocity in AU/yr
 	DOUBLE PRECISION, DIMENSION(nsystems) :: mass_a, mass_b, mass_c
+	DOUBLE PRECISION, DIMENSION(nsystems) :: ecc_b, ecc_c, sma_b, sma_c, inc_b, inc_c
 	DOUBLE PRECISION, DIMENSION(3,nsystems) :: pos_a, pos_b, pos_c
 	DOUBLE PRECISION, DIMENSION(3,nsystems) :: vel_a, vel_b, vel_c
 
@@ -35,7 +36,20 @@ PROGRAM ORBIT
 	!$OMP END PARALLEL
 	WRITE(*,'(A,I7,A)') "  ",nsystems," Systems"
 
-	! initialize a bunch of systems
+	! initialize a bunch of systems based on orbit parameters
+	DO ii=1,nsystems
+		mass_b(ii) = 1D-2 ! driver
+		ecc_b(ii) = 0.2D0 ! eccentricity
+		sma_b(ii) = 5D0 ! semimajor axis
+		inc_c(ii) = 1.1D0 ! inclination in radians?
+
+		mass_c(ii) = 1D-6 ! test particle
+		ecc_c(ii) = 0.3D0
+		sma_c(ii) = 1D0
+		inc_c(ii) = 0D0
+	ENDDO
+
+	! reparameterize in terms of cartesian pos/vel
 	DO ii=1,nsystems
 		mass_a(ii) = 1D0 ! sun
 		pos_a(1,ii) = 0D0
@@ -44,26 +58,24 @@ PROGRAM ORBIT
 		vel_a(1,ii) = 0D0
 		vel_a(2,ii) = 0D0
 		vel_a(3,ii) = 0D0
-
-		mass_b(ii) = 1D-3 ! driver
-		pos_b(1,ii) = 4.5D0
+		! TODO: fix these
+		pos_b(1,ii) = sma_b(ii)*COS(inc_b(ii))
 		pos_b(2,ii) = 0D0
-		pos_b(3,ii) = 2.6D0
+		pos_b(3,ii) = sma_b(ii)*SIN(inc_b(ii))
 		vel_b(1,ii) = 0D0
-		vel_b(2,ii) = 2.7D0
+		vel_b(2,ii) = 1.7D1
 		vel_b(3,ii) = 0D0
 
-		mass_c(ii) = 1D-6 ! test particle
-		pos_c(1,ii) = 0D0
-		pos_c(2,ii) = 1D0
-		pos_c(3,ii) = 0D0
-		vel_c(1,ii) = 6.32D0
-		vel_c(2,ii) = 0D0
+		pos_c(1,ii) = sma_c(ii)*COS(inc_c(ii))
+		pos_c(2,ii) = 0D0
+		pos_c(3,ii) = sma_c(ii)*SIN(inc_c(ii))
+		vel_c(1,ii) = 0D0
+		vel_c(2,ii) = 5.3D0
 		vel_c(3,ii) = 0D0
 
 		currtime(ii) = 0D0
 		dt(ii) = 0.0001D0
-		endtime(ii) = 1e5
+		endtime(ii) = 1e2
 		stat(ii) = 0
 	ENDDO
 
@@ -95,11 +107,12 @@ PROGRAM ORBIT
 				stat(ii) = 2
 			ENDIF
 
-			IF (ii .EQ. 1 .AND. ij .EQ. 100000) THEN
+			IF (ii .EQ. 1 .AND. ij .EQ. 1) THEN
 				CALL Eccentricity(pos_a(:,ii), vel_a(:,ii), mass_a(ii), &
 					pos_c(:,ii), vel_c(:,ii), mass_c(ii), ecc)
+				CALL Inclination(pos_c(:,ii), vel_c(:,ii), inc)
 				!WRITE(*,'(E15.6,7E15.6)') currtime(ii), pos_b(:,ii), pos_c(:,ii), ecc
-				WRITE(*,'(2E15.6)') currtime(ii), ecc
+				WRITE(*,'(6E15.6)') currtime(ii), ecc, 180D0-inc*180D0/3.14159D0, pos_c(:,ii)
 				ij = 0
 			ENDIF
 			currtime(ii) = currtime(ii) + dt(ii)
