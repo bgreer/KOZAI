@@ -36,46 +36,39 @@ PROGRAM ORBIT
 	!$OMP END PARALLEL
 	WRITE(*,'(A,I7,A)') "  ",nsystems," Systems"
 
+	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	! initialize a bunch of systems based on orbit parameters
 	DO ii=1,nsystems
-		mass_b(ii) = 1D-2 ! driver
+		mass_a(ii) = 1D0 ! sun
+		
+		mass_b(ii) = 1D-3 ! driver
 		ecc_b(ii) = 0.2D0 ! eccentricity
-		sma_b(ii) = 5D0 ! semimajor axis
-		inc_c(ii) = 1.1D0 ! inclination in radians?
+		sma_b(ii) = 10D0 ! semimajor axis
+		inc_b(ii) = 2.0D0 ! inclination in radians?
 
 		mass_c(ii) = 1D-6 ! test particle
-		ecc_c(ii) = 0.3D0
+		ecc_c(ii) = 0.5D0
 		sma_c(ii) = 1D0
 		inc_c(ii) = 0D0
 	ENDDO
+	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	! reparameterize in terms of cartesian pos/vel
 	DO ii=1,nsystems
-		mass_a(ii) = 1D0 ! sun
+		! sun does not move
 		pos_a(1,ii) = 0D0
 		pos_a(2,ii) = 0D0
 		pos_a(3,ii) = 0D0
 		vel_a(1,ii) = 0D0
 		vel_a(2,ii) = 0D0
 		vel_a(3,ii) = 0D0
-		! TODO: fix these
-		pos_b(1,ii) = sma_b(ii)*COS(inc_b(ii))
-		pos_b(2,ii) = 0D0
-		pos_b(3,ii) = sma_b(ii)*SIN(inc_b(ii))
-		vel_b(1,ii) = 0D0
-		vel_b(2,ii) = 1.7D1
-		vel_b(3,ii) = 0D0
-
-		pos_c(1,ii) = sma_c(ii)*COS(inc_c(ii))
-		pos_c(2,ii) = 0D0
-		pos_c(3,ii) = sma_c(ii)*SIN(inc_c(ii))
-		vel_c(1,ii) = 0D0
-		vel_c(2,ii) = 5.3D0
-		vel_c(3,ii) = 0D0
+		
+		! set orbit for test particle c
+		CALL SetOrbit(mass_a(ii),mass_c(ii),sma_c(ii),ecc_c(ii),inc_c(ii),pos_c,vel_c)
 
 		currtime(ii) = 0D0
-		dt(ii) = 0.0001D0
-		endtime(ii) = 1e2
+		dt(ii) = 0.0003D0
+		endtime(ii) = 1D6
 		stat(ii) = 0
 	ENDDO
 
@@ -89,17 +82,17 @@ PROGRAM ORBIT
 
 			! decide timestep?
 
-			CALL DriverPos(pos_b(:,ii),currtime(ii),11.86D0)
+			CALL DriverPos(pos_b(:,ii),currtime(ii),ecc_b(ii),sma_b(ii),inc_b(ii),mass_a(ii),mass_b(ii))
 			! integrate
-			CALL Euler2(pos_a(:,ii), vel_a(:,ii), mass_a(ii), &
+			CALL RK4(pos_a(:,ii), vel_a(:,ii), mass_a(ii), &
 					pos_b(:,ii), vel_b(:,ii), mass_b(ii), &
 					pos_c(:,ii), vel_c(:,ii), mass_c(ii), dt(ii))
 
 			! check for escape
 			IF (Escaping(pos_c(:,ii), vel_c(:,ii), mass_c(ii), &
 					pos_a(:,ii), vel_a(:,ii), mass_a(ii))) THEN
-				WRITE(*,'(A,I6,A)') "--System ",ii," Escaped"
-				stat(ii) = 1
+!				WRITE(*,'(A,I6,A)') "--System ",ii," Escaped"
+!				stat(ii) = 1
 			ENDIF
 
 			! check for collision
@@ -107,7 +100,7 @@ PROGRAM ORBIT
 				stat(ii) = 2
 			ENDIF
 
-			IF (ii .EQ. 1 .AND. ij .EQ. 1) THEN
+			IF (ii .EQ. 1 .AND. ij .EQ. 10000) THEN
 				CALL Eccentricity(pos_a(:,ii), vel_a(:,ii), mass_a(ii), &
 					pos_c(:,ii), vel_c(:,ii), mass_c(ii), ecc)
 				CALL Inclination(pos_c(:,ii), vel_c(:,ii), inc)
