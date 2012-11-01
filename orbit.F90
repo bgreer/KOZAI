@@ -7,10 +7,11 @@ PROGRAM ORBIT
 	! misc variables
 	INTEGER :: ii, ij, ik, id
 	DOUBLE PRECISION :: ecc, inc
+	REAL :: rand
 
 	! number of systems to evolve simultaneously
 	INTEGER :: nsystems
-	PARAMETER(nsystems=1)
+	PARAMETER(nsystems=100)
 	
 	! body parameters
 	! mass in solar mass
@@ -40,14 +41,16 @@ PROGRAM ORBIT
 	! initialize a bunch of systems based on orbit parameters
 	DO ii=1,nsystems
 		mass_a(ii) = 1D0 ! sun
-		
+
 		mass_b(ii) = 1D-3 ! driver
-		ecc_b(ii) = 0.2D0 ! eccentricity
-		sma_b(ii) = 10D0 ! semimajor axis
-		inc_b(ii) = 2.0D0 ! inclination in radians?
+		CALL RANDOM_NUMBER(rand)
+		ecc_b(ii) = rand
+		sma_b(ii) = 5D0 ! semimajor axis
+		CALL RANDOM_NUMBER(rand)
+		inc_b(ii) = rand*PI ! inclination in radians?
 
 		mass_c(ii) = 1D-6 ! test particle
-		ecc_c(ii) = 0.5D0
+		ecc_c(ii) = 0.4D0
 		sma_c(ii) = 1D0
 		inc_c(ii) = 0D0
 	ENDDO
@@ -117,7 +120,6 @@ PROGRAM ORBIT
 	WRITE(*,'(A)') "Integration Complete"
 
 	! output stats
-	
 
 END PROGRAM
 
