@@ -12,6 +12,8 @@ PROGRAM ORBIT
 	! number of systems to evolve simultaneously
 	INTEGER :: nsystems
 	PARAMETER(nsystems=100)
+	INTEGER :: values(1:8), k
+	INTEGER, DIMENSION(:), ALLOCATABLE :: seed
 	
 	! body parameters
 	! mass in solar mass
@@ -36,6 +38,14 @@ PROGRAM ORBIT
 	ENDIF
 	!$OMP END PARALLEL
 	WRITE(*,'(A,I7,A)') "  ",nsystems," Systems"
+
+	! Init RNG on current time
+	CALL DATE_AND_TIME(values = values)
+	CALL RANDOM_SEED(size=k)
+	ALLOCATE(seed(1:k))
+	seed(:) = values(8)
+	CALL RANDOM_SEED(put=seed)
+	DEALLOCATE(seed)
 
 	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	! initialize a bunch of systems based on orbit parameters
@@ -94,8 +104,8 @@ PROGRAM ORBIT
 			! check for escape
 			IF (Escaping(pos_c(:,ii), vel_c(:,ii), mass_c(ii), &
 					pos_a(:,ii), vel_a(:,ii), mass_a(ii))) THEN
-!				WRITE(*,'(A,I6,A)') "--System ",ii," Escaped"
-!				stat(ii) = 1
+				WRITE(*,'(A,I6,A)') "--System ",ii," Escaped"
+				stat(ii) = 1
 			ENDIF
 
 			! check for collision
@@ -120,6 +130,7 @@ PROGRAM ORBIT
 	WRITE(*,'(A)') "Integration Complete"
 
 	! output stats
+
 
 END PROGRAM
 
