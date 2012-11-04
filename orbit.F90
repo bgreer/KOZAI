@@ -1,17 +1,14 @@
 PROGRAM ORBIT
 	USE omp_lib
+	USE ParseInput
 	USE BSINT
 	USE PHYSICS
 	IMPLICIT NONE
 
 	! misc variables
-	INTEGER :: ii, ij, ik, id
+	INTEGER :: ii, ij, ik, id, argcount
 	DOUBLE PRECISION :: ecc, inc
 	REAL :: rand
-
-	! number of systems to evolve simultaneously
-	INTEGER :: nsystems
-	PARAMETER(nsystems=100)
 	INTEGER :: values(1:8), k
 	INTEGER, DIMENSION(:), ALLOCATABLE :: seed
 	
@@ -30,14 +27,10 @@ PROGRAM ORBIT
 	! 0 = ok, 1 = escaped, 2 = collided
 	INTEGER, DIMENSION(nsystems) :: stat
 
-	WRITE(*,'(A)') "Run Parameters:"
-	!$OMP PARALLEL
-	id = OMP_GET_THREAD_NUM()
-	IF (id .EQ. 0) THEN
-		WRITE(*,'(A,I4)') "  Number of threads = ",OMP_GET_NUM_THREADS()
-	ENDIF
-	!$OMP END PARALLEL
-	WRITE(*,'(A,I7,A)') "  ",nsystems," Systems"
+	! Parse command-line args
+	CALL SetDefaults()
+	CALL ReadCommandLine()
+	CALL PrintDetails()
 
 	! Init RNG on current time
 	CALL DATE_AND_TIME(values = values)
