@@ -12,6 +12,7 @@ MODULE ParseInput
 	DOUBLE PRECISION :: driver_sma_min, driver_sma_max, test_sma_min, test_sma_max
 	DOUBLE PRECISION :: driver_inc_min, driver_inc_max, test_inc_min, test_inc_max
 	DOUBLE PRECISION :: driver_ecc_min, driver_ecc_max, test_ecc_min, test_ecc_max
+	DOUBLE PRECISION :: endtime
 
 CONTAINS
 
@@ -46,6 +47,12 @@ CONTAINS
 					PRINT*, "ERROR: nsystems must be > 0  : ", nsystems
 					STOP
 				ENDIF
+			ENDIF
+
+			! end time
+			IF (strbuffer .EQ. "-t") THEN
+				CALL getarg(ii+1,strbuffer)
+				READ(strbuffer,*) endtime
 			ENDIF
 
 			! driver/test mass range
@@ -128,6 +135,7 @@ CONTAINS
 		driver_ecc_max = 0D0
 		test_ecc_min = 5D-1
 		test_ecc_max = 5D-1
+		endtime = 1e1
 	END SUBROUTINE SetDefaults
 
 	! Print the run details to stdout

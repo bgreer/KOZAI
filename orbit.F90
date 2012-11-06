@@ -21,10 +21,12 @@ PROGRAM ORBIT
 	DOUBLE PRECISION, DIMENSION(:,:), ALLOCATABLE :: pos_a, pos_b, pos_c
 	DOUBLE PRECISION, DIMENSION(:,:), ALLOCATABLE :: vel_a, vel_b, vel_c
 
+	! used for determining kozai resonance
+	DOUBLE PRECISION, DIMENSION(:,:), ALLOCATABLE :: ecc_max, ecc_min, inc_max, inc_min
 
 	! integration parameters
 	! time in years
-	DOUBLE PRECISION, DIMENSION(:), ALLOCATABLE :: currtime, dt, endtime
+	DOUBLE PRECISION, DIMENSION(:), ALLOCATABLE :: currtime, dt
 	! 0 = ok, 1 = escaped, 2 = collided
 	INTEGER, DIMENSION(:), ALLOCATABLE :: stat
 
@@ -59,8 +61,17 @@ PROGRAM ORBIT
 	ALLOCATE(vel_c(3,nsystems))
 	ALLOCATE(currtime(nsystems))
 	ALLOCATE(dt(nsystems))
-	ALLOCATE(endtime(nsystems))
 	ALLOCATE(stat(nsystems))
+	ALLOCATE(ecc_max(2,nsystems))
+	ALLOCATE(ecc_min(2,nsystems))
+	ALLOCATE(inc_max(2,nsystems))
+	ALLOCATE(inc_min(2,nsystems))
+	ecc_max(1,:) = 0D0
+	ecc_max(2,:) = -1D0
+	ecc_min(1,:) = 1D0
+	ecc_min(2,:) = 0D0
+	inc_max = 0D0
+	inc_min = 0D0
 
 	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	! initialize a bunch of systems based on orbit parameters
@@ -98,21 +109,19 @@ PROGRAM ORBIT
 		vel_a(3,ii) = 0D0
 		
 		! set orbit for test particle c
-		CALL SetOrbit(mass_a(ii),mass_c(ii),sma_c(ii),ecc_c(ii),inc_c(ii),pos_c,vel_c)
+		CALL SetOrbit(mass_a(ii),mass_c(ii),sma_c(ii),ecc_c(ii),inc_c(ii),pos_c(:,ii),vel_c(:,ii))
 
 		currtime(ii) = 0D0
 		dt(ii) = 0.0003D0
-		endtime(ii) = 1D1
 		stat(ii) = 0
 	ENDDO
-
 	WRITE(*,'(A)') "Systems Initialized, Beginning Integration."
 
 	! evolve the systems in parallel
-	!$OMP PARALLEL DO PRIVATE(ii,ij) SCHEDULE(DYNAMIC,1)
+	!$OMP PARALLEL DO PRIVATE(ii,ij,ecc,inc) SCHEDULE(DYNAMIC,1)
 	DO ii=1,nsystems
 		ij = 0
-		DO WHILE (currtime(ii) .LT. endtime(ii) .AND. stat(ii) .EQ. 0)
+		DO WHILE (currtime(ii) .LT. endtime .AND. stat(ii) .EQ. 0)
 
 			! decide timestep?
 
@@ -121,7 +130,6 @@ PROGRAM ORBIT
 			CALL RK4(pos_a(:,ii), vel_a(:,ii), mass_a(ii), &
 					pos_b(:,ii), vel_b(:,ii), mass_b(ii), &
 					pos_c(:,ii), vel_c(:,ii), mass_c(ii), dt(ii))
-
 			! check for escape
 			IF (Escaping(pos_c(:,ii), vel_c(:,ii), mass_c(ii), &
 					pos_a(:,ii), vel_a(:,ii), mass_a(ii))) THEN
@@ -135,13 +143,22 @@ PROGRAM ORBIT
 			ENDIF
 
 			! compute current eccentricity and inclination
-			IF (ij .EQ. 10000) THEN
+			IF (ij .EQ. 10) THEN
 				CALL Eccentricity(pos_a(:,ii), vel_a(:,ii), mass_a(ii), &
 						pos_c(:,ii), vel_c(:,ii), mass_c(ii), ecc)
 				CALL Inclination(pos_c(:,ii), vel_c(:,ii), inc)
+				! Record ecc and/or inc if they are extrema
+				IF (ecc .GT. ecc_max(1,ii)) THEN
+					ecc_max(1,ii) = ecc
+					ecc_max(2,ii) = currtime(ii)
+				ENDIF
+				IF (ecc .LT. ecc_min(1,ii)) THEN
+					ecc_min(1,ii) = ecc
+					ecc_min(2,ii) = currtime(ii)
+				ENDIF
 
-				IF (ii .EQ. 1 .AND. verbose) THEN
-					WRITE(*,'(6E15.6)') currtime(ii), ecc, 180D0-inc*180D0/3.14159D0, pos_c(:,ii)
+				IF (ii .EQ. 2 .AND. verbose) THEN
+					WRITE(*,'(6E15.6)') currtime(ii), ecc, 180D0-inc*180D0/3.14159D0, vel_c(:,ii)
 				ENDIF
 				ij = 0
 			ENDIF
@@ -157,12 +174,15 @@ PROGRAM ORBIT
 	! output stats
 	DO ii=1,nsystems
 		! initial conditions
-		WRITE(*,'(I5,I3,6E12.4$)') ii, stat(ii), mass_b(ii), inc_b(ii), ecc_b(ii), mass_c(ii), inc_c(ii), ecc_c(ii)
+		WRITE(*,'(I5,I3,6E12.4$)') ii, stat(ii), mass_b(ii), inc_b(ii), ecc_b(ii), &
+				mass_c(ii), inc_c(ii), ecc_c(ii)
 		! inclination oscillation
-		WRITE(*,'($)')
+		WRITE(*,'(4E12.4$)'), ecc_max(:,ii), ecc_min(:,ii)
 		! eccentricity oscillation
 		WRITE(*,'()')
 	ENDDO
+
+	! remember to deallocate, someday
 
 END PROGRAM
 
