@@ -11,17 +11,19 @@ CONTAINS
 	SUBROUTINE Gravity(posA, massA, posB, massB, posC, massC, accel)
 		IMPLICIT NONE
 		DOUBLE PRECISION, DIMENSION(3) :: posA, velA, posB, velB, posC, velC
-		DOUBLE PRECISION, DIMENSION(3) :: accel, dist1, dist2
-		DOUBLE PRECISION :: massA, massB, massC, gravA, gravB
+		DOUBLE PRECISION, DIMENSION(3) :: accel, dist1, dist2, dist3
+		DOUBLE PRECISION :: massA, massB, massC, gravA, gravB, gravC
 
 		dist1(:) = posC(:) - posA(:)
 		dist2(:) = posC(:) - posB(:)
+		dist3(:) = posB(:) - posA(:)
 
 		! solve for gravity
 		gravA = -G*massA/(VecMag(dist1))**3D0
 		gravB = -G*massB/(VecMag(dist2))**3D0
+		gravC = -G*massB/(VecMag(dist3))**3D0
 
-		accel(:) = gravA*dist1(:) + gravB*dist2(:)
+		accel(:) = gravA*dist1(:) + gravB*dist2(:) + gravC*dist3(:)
 	END SUBROUTINE Gravity
 
 	! measure current inclination relative to.. uh.. z-axis?

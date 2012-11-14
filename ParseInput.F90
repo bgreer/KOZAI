@@ -127,10 +127,10 @@ CONTAINS
 		driver_sma_max = 1D2
 		test_sma_min = 1D0
 		test_sma_max = 1D0
-		driver_inc_min = 1D0
-		driver_inc_max = 1D0
-		test_inc_min = 0D0
-		test_inc_max = 0D0
+		driver_inc_min = 0D0
+		driver_inc_max = 0D0
+		test_inc_min = 1D0
+		test_inc_max = 1D0
 		driver_ecc_min = 0D0
 		driver_ecc_max = 0D0
 		test_ecc_min = 5D-1

@@ -157,7 +157,7 @@ PROGRAM ORBIT
 					ecc_min(2,ii) = currtime(ii)
 				ENDIF
 
-				IF (ii .EQ. 2 .AND. verbose) THEN
+				IF (ii .EQ. 1 .AND. verbose) THEN
 					WRITE(*,'(6E15.6)') currtime(ii), ecc, 180D0-inc*180D0/3.14159D0, vel_c(:,ii)
 				ENDIF
 				ij = 0
