@@ -143,7 +143,7 @@ PROGRAM ORBIT
 			ENDIF
 
 			! compute current eccentricity and inclination
-			IF (ij .EQ. 10) THEN
+			IF (ij .EQ. 1000) THEN
 				CALL Eccentricity(pos_a(:,ii), vel_a(:,ii), mass_a(ii), &
 						pos_c(:,ii), vel_c(:,ii), mass_c(ii), ecc)
 				CALL Inclination(pos_c(:,ii), vel_c(:,ii), inc)

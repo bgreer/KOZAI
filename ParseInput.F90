@@ -133,8 +133,8 @@ CONTAINS
 		test_inc_max = 1D0
 		driver_ecc_min = 0D0
 		driver_ecc_max = 0D0
-		test_ecc_min = 5D-1
-		test_ecc_max = 5D-1
+		test_ecc_min = 1D-1
+		test_ecc_max = 1D-1
 		endtime = 1e1
 	END SUBROUTINE SetDefaults
 
